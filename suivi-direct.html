@@ -98,7 +98,7 @@
 
 <script>
 const params = new URLSearchParams(window.location.search);
-const blobId = params.get('id');
+const dbUrl = params.get('db');
 let dernierOnglet = '1';
 let dernierePayload = null;
 
@@ -110,22 +110,23 @@ function afficherErreur(msg){
 }
 
 async function rafraichir(manuel){
-  if(!blobId){
+  if(!dbUrl){
     afficherErreur('⚠️ Lien invalide — QR code incomplet');
     return;
   }
   if(manuel) document.getElementById('statut-texte').textContent = '⏳ Actualisation…';
   try{
-    const resp = await fetch('https://jsonblob.com/api/jsonBlob/'+blobId, {
-      headers:{'Accept':'application/json'},
-      cache:'no-store'
-    });
-    if(resp.status === 404){
-      document.getElementById('statut-texte').textContent = '⏳ Suivi pas encore activé par l\'organisateur…';
+    const resp = await fetch(dbUrl.replace(/\/+$/,'')+'/suivi.json', { cache:'no-store' });
+    if(resp.status === 401 || resp.status === 403){
+      afficherErreur('⚠️ Accès refusé — vérifiez les règles de sécurité Firebase');
       return;
     }
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const data = await resp.json();
+    if(data === null){
+      document.getElementById('statut-texte').textContent = '⏳ Suivi pas encore activé par l\'organisateur…';
+      return;
+    }
     dernierePayload = data;
     document.getElementById('msg-erreur').style.display = 'none';
     afficherDonnees(data);
