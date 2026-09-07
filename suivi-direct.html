@@ -6,9 +6,13 @@
 <title>Suivi en direct — Phase finale</title>
 <style>
   :root{
-    --primary:#1e3a5f; --secondary:#2d6a9f; --success:#16a34a; --gold:#d4a017;
-    --border:#e2e8f0; --text-light:#64748b; --bg:#f4f6f9;
+    /* Palette identique à l'application principale, pour un rendu fidèle des tableaux */
+    --primary:#1a2744; --secondary:#2d6a9f; --accent:#e84855;
+    --gold:#f0a500; --success:#27ae60; --warning:#e67e22;
+    --light:#f4f6fa; --border:#dde3ee; --text:#1a2744; --text-light:#6b7a99;
+    --bg:#f4f6f9;
   }
+  .bkt-raw-scroll{overflow:auto; -webkit-overflow-scrolling:touch; background:#fff; border-radius:10px; border:1px solid var(--border);}
   *{box-sizing:border-box;}
   body{
     margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
@@ -200,7 +204,13 @@ function ligneJoueur(nom, estVainqueur, joue){
 
 function rendreTableau(tableau){
   if(tableau.type === 'poule') return rendrePoule(tableau.data);
+  if(tableau.type === 'bracket-html') return rendreBracketHTML(tableau.html);
   return rendreBracketComplet(tableau.data);
+}
+
+function rendreBracketHTML(html){
+  if(!html) return '<p style="text-align:center;color:#94a3b8;">Phase finale pas encore générée.</p>';
+  return `<div class="bkt-raw-scroll">${html}</div>`;
 }
 
 // ── Rendu d'un arbre de tableau (colonnes + connecteurs) ──
