@@ -96,6 +96,10 @@
     display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;
     border-radius:50%;background:var(--secondary);color:#fff;font-size:.7rem;font-weight:700;
   }
+  .badge-district{
+    display:inline-block;padding:2px 7px;border-radius:6px;background:#eef2f7;
+    color:var(--text-light);font-size:.68rem;font-weight:600;
+  }
   #msg-erreur{
     text-align:center;padding:40px 20px;color:var(--text-light);font-size:.9rem;
   }
@@ -180,6 +184,7 @@ function afficherDonnees(data){
   if(data.tableaux?.tab1) tabs.push({key:'tab1', label:'Finale 1'});
   if(data.tableaux?.tab2) tabs.push({key:'tab2', label:'Finale 2'});
   if(data.tableaux?.tab3) tabs.push({key:'tab3', label:'Finale 3'});
+  if(data.classementFinal) tabs.push({key:'classement', label:'Classement final'});
 
   const ongletsEl = document.getElementById('onglets');
   if(tabs.length > 1){
@@ -192,8 +197,33 @@ function afficherDonnees(data){
   }
 
   if(!tabs.find(t=>t.key===dernierOnglet) && tabs.length) dernierOnglet = tabs[0].key;
+
+  if(dernierOnglet === 'classement'){
+    document.getElementById('contenu').innerHTML = rendreClassementFinal(data.classementFinal);
+    return;
+  }
   const actif = data.tableaux?.[dernierOnglet];
   document.getElementById('contenu').innerHTML = actif ? rendreTableau(actif) : '<p style="text-align:center;color:#94a3b8;">Phase finale pas encore générée.</p>';
+}
+
+function rendreClassementFinal(cf){
+  if(!cf || (!cf.places1 && !cf.places2 && !cf.places3)) return '<p style="text-align:center;color:#94a3b8;">Classement pas encore disponible.</p>';
+  const bloc=(places,titre)=>{
+    if(!places) return '';
+    const lignes=places.map(r=>`
+      <tr>
+        <td><span class="rang-badge">${r.place}</span></td>
+        <td>${r.nom?escapeHtml(r.nom):'<span style="color:#bbb;">—</span>'}</td>
+        <td style="font-size:.78rem;">${r.etab?escapeHtml(r.etab):'—'}</td>
+        <td>${r.district?`<span class="badge-district">${escapeHtml(r.district)}</span>`:'—'}</td>
+      </tr>`).join('');
+    return `<div class="bkt-section">
+      <div class="bkt-section-titre">🏆 ${titre}</div>
+      <table class="classement-table"><thead><tr><th>Place</th><th>Joueur</th><th>Établissement</th><th>District</th></tr></thead>
+      <tbody>${lignes}</tbody></table>
+    </div>`;
+  };
+  return bloc(cf.places1,'Places 1 à 16') + bloc(cf.places2,'Places 17 à 32') + bloc(cf.places3,'Places 33 à 48');
 }
 
 function choisirOnglet(key){
