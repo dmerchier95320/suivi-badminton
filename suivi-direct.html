@@ -159,7 +159,12 @@ async function rafraichir(manuel){
     }
     dernierePayload = data;
     document.getElementById('msg-erreur').style.display = 'none';
+    // Mémorise la position de défilement avant de remplacer le contenu,
+    // car la reconstruction du HTML (onglets + tableau) peut sinon
+    // remettre la page en haut à chaque actualisation automatique.
+    const scrollY = window.scrollY;
     afficherDonnees(data);
+    requestAnimationFrame(()=>window.scrollTo(0, scrollY));
     document.getElementById('statut-texte').textContent = '🟢 En direct';
     document.getElementById('maj-info').textContent = 'Dernière mise à jour : '+new Date(data.maj).toLocaleTimeString('fr-FR');
   }catch(e){
