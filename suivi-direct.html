@@ -161,16 +161,7 @@ async function rafraichir(manuel){
       document.getElementById('statut-texte').textContent = '⏳ Suivi pas encore activé par l\'organisateur…';
       return;
     }
-    dernierePayload = data;
-    document.getElementById('msg-erreur').style.display = 'none';
-    // Mémorise la position de défilement avant de remplacer le contenu,
-    // car la reconstruction du HTML (onglets + tableau) peut sinon
-    // remettre la page en haut à chaque actualisation automatique.
-    const scrollY = window.scrollY;
-    afficherDonnees(data);
-    requestAnimationFrame(()=>window.scrollTo(0, scrollY));
-    document.getElementById('statut-texte').textContent = '🟢 En direct';
-    document.getElementById('maj-info').textContent = 'Dernière mise à jour : '+new Date(data.maj).toLocaleTimeString('fr-FR');
+    traiterNouvellesDonnees(data);
   }catch(e){
     document.getElementById('statut-texte').textContent = '⚠️ Hors ligne — nouvelle tentative…';
   }
@@ -333,8 +324,61 @@ function escapeHtml(s){
   return d.innerHTML;
 }
 
-rafraichir(false);
-setInterval(()=>rafraichir(false), 6000);
+function traiterNouvellesDonnees(data){
+  dernierePayload = data;
+  document.getElementById('msg-erreur').style.display = 'none';
+  // Mémorise la position de défilement avant de remplacer le contenu,
+  // car la reconstruction du HTML (onglets + tableau) peut sinon
+  // remettre la page en haut à chaque mise à jour.
+  const scrollY = window.scrollY;
+  afficherDonnees(data);
+  requestAnimationFrame(()=>window.scrollTo(0, scrollY));
+  document.getElementById('statut-texte').textContent = '🟢 En direct';
+  document.getElementById('maj-info').textContent = 'Dernière mise à jour : '+new Date(data.maj).toLocaleTimeString('fr-FR');
+}
+
+// ── Connexion temps réel à Firebase (Server-Sent Events) ──
+// Plutôt que de revérifier toutes les X secondes, on reste connecté au flux
+// de la base Firebase : la page n'est mise à jour que lorsque l'organisateur
+// pousse réellement une nouvelle saisie, sans délai d'attente ni requêtes inutiles.
+let _flux=null;
+let _rechuteEnSondage=false;
+
+function demarrerFluxTempsReel(){
+  if(!dbUrl) return;
+  if(typeof EventSource === 'undefined'){
+    // Navigateur trop ancien pour le flux temps réel : on repasse en mode
+    // vérification périodique (comportement précédent, en secours).
+    _rechuteEnSondage=true;
+    setInterval(()=>rafraichir(false), 6000);
+    return;
+  }
+  const streamUrl = dbUrl.replace(/\/+$/,'')+'/suivi.json';
+  _flux = new EventSource(streamUrl);
+
+  _flux.addEventListener('put', (e)=>{
+    try{
+      const evt = JSON.parse(e.data);
+      if(evt.path !== '/') return; // l'organisateur remplace toujours tout le document
+      if(evt.data === null){
+        document.getElementById('statut-texte').textContent = '⏳ Suivi pas encore activé par l\'organisateur…';
+        return;
+      }
+      traiterNouvellesDonnees(evt.data);
+    }catch(err){ /* trame ignorée */ }
+  });
+
+  _flux.onopen = ()=>{
+    document.getElementById('statut-texte').textContent = '🟢 En direct';
+  };
+  _flux.onerror = ()=>{
+    // Le navigateur retente automatiquement la connexion en arrière-plan.
+    document.getElementById('statut-texte').textContent = '⚠️ Connexion perdue — reconnexion automatique…';
+  };
+}
+
+rafraichir(false);       // premier chargement immédiat
+demarrerFluxTempsReel(); // puis mises à jour en temps réel, sans sondage périodique
 </script>
 </body>
 </html>
